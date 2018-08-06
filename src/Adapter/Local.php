@@ -15,9 +15,14 @@ use League\Flysystem\Filesystem;
 
 class Local extends Adapter
 {
-	public function __construct(string $folder)
+	/**
+	 * Loading the root of the image folder
+	 *
+	 * @param string $baseFolder
+	 */
+	public function __construct(string $baseFolder)
 	{
-		$adapter          = new FilesystemAdapter($folder);
+		$adapter          = new FilesystemAdapter($baseFolder);
 		$this->filesystem = new Filesystem($adapter);
 	}
 
