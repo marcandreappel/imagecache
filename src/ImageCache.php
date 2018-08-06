@@ -20,19 +20,19 @@ class ImageCache
 {
 	use Textr;
 
-	public $source;
+	public $quality = 90;
+	public $sourceFile;
 	public $width;
 	public $height;
-	public $quality = 90;
 
-	protected $adapter;
-	protected $filesystem;
-	protected $cacheFolder;
+	protected $baseFolder;
 	protected $cacheFilename;
+	protected $cacheFolder;
 	protected $cachePath;
 
+	private $adapter;
+	private $filesystem;
 	private $imageObject;
-	private $rootFolder;
 
 	/**
 	 * ImageCache constructor.
@@ -42,6 +42,10 @@ class ImageCache
 	 */
 	public function __construct(Adapter $adapter, string $sourceFile = null)
 	{
+		$this->adapter    = $adapter;
+		$this->baseFolder = rtrim($adapter->baseFolder(), '/');
+		$this->filesystem = $adapter->filesystem();
+
 		if ( ! is_null($sourceFile))
 		{
 			try
@@ -53,9 +57,6 @@ class ImageCache
 				throw new $exception;
 			}
 		}
-		$this->adapter    = $adapter;
-		$this->rootFolder = $adapter->baseFolder();
-		$this->filesystem = $adapter->filesystem();
 	}
 
 	/**
@@ -151,22 +152,54 @@ class ImageCache
 	}
 
 	/**
-	 * @param string $source
+	 * @param string $sourceFile
 	 *
 	 * @return ImageCache
 	 * @throws FileNotFound
 	 */
-	public function loadImage(string $source): self
+	public function loadImage(string $sourceFile): self
 	{
-		$this->source = $source;
-		if ( ! is_file($this->source))
+		$_sourceFile = $sourceFile;
+		if (strpos($_sourceFile, '/') !== 0)
+		{
+			$_sourceFile = "/$_sourceFile";
+		}
+		if ( ! is_file($_sourceFile))
+		{
+			$_sourceFile = $this->baseFolder . $_sourceFile;
+		}
+		if ( ! is_file($_sourceFile))
 		{
 			throw new FileNotFound("File not found");
 		}
-		$this->imageObject = ImageManagerStatic::make($source);
+		$this->sourceFile    = $_sourceFile;
+		$this->imageObject   = ImageManagerStatic::make($_sourceFile);
 		$this->cacheFilename = $this->imageObject->basename;
 
 		return $this;
+	}
+
+	public function __get($name)
+	{
+		switch ($name)
+		{
+			case 'publicPath':
+				return $this->cacheFolder;
+				break;
+			case 'absolutePath':
+				return $this->baseFolder.$this->cacheFolder;
+				break;
+			case 'absoluteImage':
+			case 'absolute':
+				return $this->cachePath;
+				break;
+			case 'publicImage':
+			case 'public':
+			case 'image':
+			default:
+				return "{$this->cacheFolder}/{$this->cacheFilename}";
+				break;
+		}
 	}
 
 	/**
@@ -190,10 +223,15 @@ class ImageCache
 		if ( ! $this->filesystem->has($cacheFolder))
 		{
 			$this->filesystem->createDir($cacheFolder);
-			return false;
+			$hasCache = false;
 		}
+		else
+		{
+			$hasCache = true;
+		}
+		$this->cacheFolder = $cacheFolder;
 
-		return $this->filesystem->has($this->cachePath);
+		return $hasCache;
 	}
 
 	/**
