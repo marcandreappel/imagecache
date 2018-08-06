@@ -211,13 +211,13 @@ class ImageCache
 	}
 
 	/**
-	 * @param string $method
-	 * @param int    $width
-	 * @param int    $height
+	 * @param string   $method
+	 * @param int      $width
+	 * @param int|null $height
 	 *
 	 * @return bool
 	 */
-	private function prepareCache(string $method, int $width, int $height): bool
+	private function prepareCache(string $method, int $width = null, int $height = null): bool
 	{
 		if ( ! is_null($this->method))
 		{
@@ -226,7 +226,18 @@ class ImageCache
 		}
 		else
 		{
-			$cacheFolder = "/$method/$width/$height";
+			if ($method == 'scale' && is_null($height))
+			{
+				$cacheFolder = "/$method/$width/auto";
+			}
+			else if ($method == 'scale' && is_null($height))
+			{
+				$cacheFolder = "/$method/auto/$height";
+			}
+			else
+			{
+				$cacheFolder = "/$method/$width/$height";
+			}
 		}
 
 		$baseFolder = $this->adapter->baseFolder();
