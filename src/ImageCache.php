@@ -25,6 +25,7 @@ class ImageCache
 	public $width;
 	public $height;
 
+	protected $method = null;
 	protected $baseFolder;
 	protected $cacheFilename;
 	protected $cacheFolder;
@@ -202,6 +203,13 @@ class ImageCache
 		}
 	}
 
+	public function method(string $override)
+	{
+		$this->method = $override;
+
+		return $this;
+	}
+
 	/**
 	 * @param string $method
 	 * @param int    $width
@@ -211,7 +219,15 @@ class ImageCache
 	 */
 	private function prepareCache(string $method, int $width, int $height): bool
 	{
-		$cacheFolder = "/$method/$width/$height";
+		if ( ! is_null($this->method))
+		{
+			$handler = rtrim($this->method, '/');
+			$cacheFolder = "/$handler";
+		}
+		else
+		{
+			$cacheFolder = "/$method/$width/$height";
+		}
 
 		$baseFolder = $this->adapter->baseFolder();
 		if (strrpos($baseFolder, '/', -1))
