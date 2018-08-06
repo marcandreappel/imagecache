@@ -1,0 +1,28 @@
+{
+  "name": "marcandreappel/imagecache",
+  "type": "library",
+  "description": "Image resizing and caching",
+  "keywords": [
+    "marcandreappel",
+    "imagecache"
+  ],
+  "homepage": "https://github.com/marcandreappel/imagecache",
+  "license": "LGPL-3.0-or-later",
+  "authors": [
+    {
+      "name": "Marc-André Appel",
+      "email": "marc-andre@appel.fun"
+    }
+  ],
+  "require": {
+    "php": ">=7.0.0",
+    "intervention/image": "^2.4",
+    "league/flysystem": "^1.0",
+    "marcandreappel/textr": "^1"
+  },
+  "autoload": {
+    "psr-4": {
+      "MarcAndreAppel\\ImageCache\\": "src"
+    }
+  }
+}
