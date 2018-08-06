@@ -1,7 +1,8 @@
 # ImageCache
 Fast image handling and caching
 
-```
+```php
+
 // The absolute path to the http image folder
 $adapter = new \MarcAndreAppel\ImageCache\Adapter\Local('/absolute/path/to/base_folder/images');
 
