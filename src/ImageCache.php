@@ -70,9 +70,9 @@ class ImageCache
 	{
 		if ( ! $this->prepareCache('thumbnail', $width, $height))
 		{
-			$scale           = max($width / $this->_width(), $height / $this->_height());
-			$_width          = ceil($this->_width() * $scale);
-			$_height         = ceil($this->_height() * $scale);
+			$scale           = max($width / $this->width(), $height / $this->height());
+			$_width          = ceil($this->width() * $scale);
+			$_height         = ceil($this->height() * $scale);
 			$x_offset        = floor(($_width - $width) / 2);
 			$y_offset        = floor(($_height - $height) / 2);
 
@@ -180,7 +180,12 @@ class ImageCache
 		return $this;
 	}
 
-	public function __get($name)
+	/**
+	 * @param $name
+	 *
+	 * @return string
+	 */
+	public function __get($name): string
 	{
 		switch ($name)
 		{
