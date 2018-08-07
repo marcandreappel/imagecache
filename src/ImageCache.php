@@ -280,12 +280,18 @@ class ImageCache
 		return $this;
 	}
 
-	private function _width(): int
+	/**
+	 * @return int
+	 */
+	public function width(): int
 	{
 		return $this->imageObject->getWidth();
 	}
 
-	private function _height(): int
+	/**
+	 * @return int
+	 */
+	public function height(): int
 	{
 		return $this->imageObject->getHeight();
 	}
