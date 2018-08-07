@@ -10,54 +10,31 @@
 
 namespace MarcAndreAppel\ImageCache;
 
+use Intervention\Image\File;
+use Intervention\Image\ImageManager;
 use \InvalidArgumentException;
-use Intervention\Image\ImageManagerStatic;
-use MarcAndreAppel\ImageCache\Adapter\Adapter;
 use MarcAndreAppel\ImageCache\Exception\FileNotFound;
 use MarcAndreAppel\Textr\Textr;
 
-class ImageCache
+
+class ImageCache extends File
 {
 	use Textr;
 
 	public $quality = 90;
-	public $sourceFile;
-	public $width;
-	public $height;
 
 	protected $method = null;
-	protected $baseFolder;
-	protected $cacheFilename;
-	protected $cacheFolder;
-	protected $cachePath;
+	protected $prefix = null;
+	protected $image;
+	protected $cache;
 
-	private $adapter;
-	private $filesystem;
-	private $imageObject;
-
-	/**
-	 * ImageCache constructor.
-	 *
-	 * @param Adapter     $adapter
-	 * @param string|null $sourceFile
-	 */
-	public function __construct(Adapter $adapter, string $sourceFile = null)
+	public function __construct(string $path)
 	{
-		$this->adapter    = $adapter;
-		$this->baseFolder = rtrim($adapter->baseFolder(), '/');
-		$this->filesystem = $adapter->filesystem();
-
-		if ( ! is_null($sourceFile))
+		if ( ! file_exists($path) || ! is_file($path))
 		{
-			try
-			{
-				$this->loadImage($sourceFile);
-			}
-			catch (\Exception $exception)
-			{
-				throw new $exception;
-			}
+			throw new FileNotFound('File not found');
 		}
+		$this->setFileInfoFromPath($path);
 	}
 
 	/**
@@ -68,7 +45,7 @@ class ImageCache
 	 */
 	public function thumbnail(int $width, int $height): self
 	{
-		if ( ! $this->prepareCache('thumbnail', $width, $height))
+		if ( ! $this->cache('thumbnail', $width, $height))
 		{
 			$scale           = max($width / $this->width(), $height / $this->height());
 			$_width          = ceil($this->width() * $scale);
@@ -76,8 +53,8 @@ class ImageCache
 			$x_offset        = floor(($_width - $width) / 2);
 			$y_offset        = floor(($_height - $height) / 2);
 
-			$this->imageObject->resize($_width, $_height);
-			$this->imageObject->crop($width, $height, $x_offset, $y_offset);
+			$this->image->resize($_width, $_height);
+			$this->image->crop($width, $height, $x_offset, $y_offset);
 
 			$this->save();
 		}
@@ -92,9 +69,9 @@ class ImageCache
 	 */
 	public function resize($width, $height): self
 	{
-		if ( ! $this->prepareCache('resized', $width, $height))
+		if ( ! $this->cache('resized', $width, $height))
 		{
-			$this->imageObject->resize($width, $height);
+			$this->image->resize($width, $height);
 			$this->save();
 		}
 		return $this;
@@ -110,9 +87,9 @@ class ImageCache
 	 */
 	public function crop(int $width, int $height, int $x_offset, int $y_offset): self
 	{
-		if ( ! $this->prepareCache('cropped', $width, $height))
+		if ( ! $this->cache('cropped', $width, $height))
 		{
-			$this->imageObject->crop($width, $height, $x_offset, $y_offset);
+			$this->image->crop($width, $height, $x_offset, $y_offset);
 			$this->save();
 		}
 		return $this;
@@ -126,7 +103,7 @@ class ImageCache
 	 */
 	public function scale(int $width = null, int $height = null): self
 	{
-		if ( ! $this->prepareCache('scaled', $width, $height))
+		if ( ! $this->cache('scaled', $width, $height))
 		{
 			if (is_null($width) && is_null($height))
 			{
@@ -141,71 +118,17 @@ class ImageCache
 			}
 			if (!is_null($width))
 			{
-				$this->imageObject->widen($width);
+				$this->image->widen($width);
 				$this->save();
 
 				return $this;
 			}
-			$this->imageObject->heighten($height);
+			$this->image->heighten($height);
 			$this->save();
 		}
 		return $this;
 	}
 
-	/**
-	 * @param string $sourceFile
-	 *
-	 * @return ImageCache
-	 * @throws FileNotFound
-	 */
-	public function loadImage(string $sourceFile): self
-	{
-		$_sourceFile = $sourceFile;
-		if (strpos($_sourceFile, '/') !== 0)
-		{
-			$_sourceFile = "/$_sourceFile";
-		}
-		if ( ! is_file($_sourceFile))
-		{
-			$_sourceFile = $this->baseFolder . $_sourceFile;
-		}
-		if ( ! is_file($_sourceFile))
-		{
-			throw new FileNotFound("File not found");
-		}
-		$this->sourceFile    = $_sourceFile;
-		$this->imageObject   = ImageManagerStatic::make($_sourceFile);
-		$this->cacheFilename = $this->imageObject->basename;
-
-		return $this;
-	}
-
-	/**
-	 * @param $name
-	 *
-	 * @return string
-	 */
-	public function __get($name): string
-	{
-		switch ($name)
-		{
-			case 'publicPath':
-				return $this->cacheFolder;
-				break;
-			case 'absolutePath':
-				return $this->baseFolder.$this->cacheFolder;
-				break;
-			case 'absoluteImage':
-			case 'absolute':
-				return $this->cachePath;
-				break;
-			case 'publicImage':
-			case 'public':
-			default:
-				return "{$this->cacheFolder}/{$this->cacheFilename}";
-				break;
-		}
-	}
 
 	/**
 	 * @param string $override
@@ -214,7 +137,31 @@ class ImageCache
 	 */
 	public function method(string $override)
 	{
-		$this->method = $override;
+		$this->method = $this->urlify($override);
+
+		return $this;
+	}
+
+	/**
+	 * @param string $override
+	 *
+	 * @return $this
+	 */
+	public function prefix(string $override)
+	{
+		$this->prefix = $this->urlify($override);
+
+		return $this;
+	}
+
+	/**
+	 * @param int $override
+	 *
+	 * @return $this
+	 */
+	public function quality(int $override)
+	{
+		$this->quality = $override;
 
 		return $this;
 	}
@@ -226,63 +173,62 @@ class ImageCache
 	 *
 	 * @return bool
 	 */
-	private function prepareCache(string $method, int $width = null, int $height = null): bool
+	private function cache(string $method, int $width = null, int $height = null): bool
 	{
 		if ( ! is_null($this->method))
 		{
-			$handler = rtrim($this->method, '/');
-			$cacheFolder = "/$handler";
+			$cache = "/{$this->urlify($this->method)}";
 		}
 		else
 		{
 			if ($method == 'scale' && is_null($height))
 			{
-				$cacheFolder = "/$method/$width/auto";
+				$cache = "/$method/$width/auto";
 			}
 			else if ($method == 'scale' && is_null($height))
 			{
-				$cacheFolder = "/$method/auto/$height";
+				$cache = "/$method/auto/$height";
 			}
 			else
 			{
-				$cacheFolder = "/$method/$width/$height";
+				$cache = "/$method/$width/$height";
 			}
 		}
-
-		$baseFolder = $this->adapter->baseFolder();
-		if (strrpos($baseFolder, '/', -1))
+		if ( ! is_null($this->prefix))
 		{
-			$baseFolder = substr($baseFolder, 0, strlen($baseFolder)-1);
+			$cache = "/{$this->prefix}$cache";
 		}
-		$this->cachePath = "$baseFolder$cacheFolder/{$this->imageObject->basename}";
 
-		if ( ! $this->filesystem->has($cacheFolder))
-		{
-			$this->filesystem->createDir($cacheFolder);
-			$hasCache = false;
-		}
-		else
-		{
-			$hasCache = true;
-		}
-		$this->cacheFolder = $cacheFolder;
+		$this->cache = "{$this->dirname}$cache";
 
-		return $hasCache;
+		$cached = true;
+		if ( ! is_dir($this->cache))
+		{
+			$umask = umask(0);
+			mkdir($this->cache, 0755, true);
+			umask($umask);
+			$cached = false;
+		}
+		else if ( ! file_exists("{$this->cache}/{$this->basename}"))
+		{
+			$cached = false;
+		}
+		if ( ! $cached)
+		{
+			$image = new ImageManager();
+			$this->image = $image->make("{$this->dirname}/{$this->basename}");
+		}
+		return $cached;
 	}
 
 	/**
 	 * @return ImageCache
 	 */
-	private function save(): self
+	private function save()
 	{
-		$this->imageObject->save($this->cachePath);
-		/**
-		 * @brief Clear the cached file size and refresh the image information
-		 */
+		$this->image->save("{$this->cache}/{$this->basename}", (int) $this->quality);
 		clearstatcache();
-		chmod($this->cachePath, 0644);
-
-		return $this;
+		chmod("{$this->cache}/{$this->basename}", 0644);
 	}
 
 	/**
@@ -290,7 +236,7 @@ class ImageCache
 	 */
 	public function width(): int
 	{
-		return $this->imageObject->getWidth();
+		return $this->image->getWidth();
 	}
 
 	/**
@@ -298,6 +244,24 @@ class ImageCache
 	 */
 	public function height(): int
 	{
-		return $this->imageObject->getHeight();
+		return $this->image->getHeight();
+	}
+
+	/**
+	 * @return string
+	 */
+	public function __toString()
+	{
+		return "{$this->cache}/{$this->basename}";
+	}
+
+	/**
+	 * @param $name
+	 *
+	 * @return string
+	 */
+	public function __get($name)
+	{
+		return "{$this->cache}/{$this->basename}";
 	}
 }
