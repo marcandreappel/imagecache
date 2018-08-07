@@ -10,31 +10,50 @@
 
 namespace MarcAndreAppel\ImageCache;
 
-use Intervention\Image\File;
 use Intervention\Image\ImageManager;
 use \InvalidArgumentException;
 use MarcAndreAppel\ImageCache\Exception\FileNotFound;
 use MarcAndreAppel\Textr\Textr;
 
 
-class ImageCache extends File
+class ImageCache
 {
 	use Textr;
 
-	public $quality = 90;
-
+	protected $quality = 90;
+	protected $width;
+	protected $height;
 	protected $method = null;
 	protected $prefix = null;
+	protected $enlarge = false;
 	protected $image;
 	protected $cache;
+	protected $dirname;
+	protected $basename;
+	protected $extension;
+	protected $filename;
 
+	/**
+	 * ImageCache constructor.
+	 *
+	 * @param string $path
+	 *
+	 * @throws FileNotFound
+	 */
 	public function __construct(string $path)
 	{
 		if ( ! file_exists($path) || ! is_file($path))
 		{
 			throw new FileNotFound('File not found');
 		}
-		$this->setFileInfoFromPath($path);
+
+		$info = pathinfo($path);
+		$this->dirname = array_key_exists('dirname', $info) ? $info['dirname'] : null;
+		$this->basename = array_key_exists('basename', $info) ? $info['basename'] : null;
+		$this->extension = array_key_exists('extension', $info) ? $info['extension'] : null;
+		$this->filename = array_key_exists('filename', $info) ? $info['filename'] : null;
+
+		list($this->width, $this->height) = getimagesize($path);
 	}
 
 	/**
@@ -167,6 +186,18 @@ class ImageCache extends File
 	}
 
 	/**
+	 * @param bool $override
+	 *
+	 * @return $this
+	 */
+	public function enlarge(bool $override)
+	{
+		$this->enlarge = $override;
+
+		return $this;
+	}
+
+	/**
 	 * @param string   $method
 	 * @param int      $width
 	 * @param int|null $height
@@ -175,17 +206,25 @@ class ImageCache extends File
 	 */
 	private function cache(string $method, int $width = null, int $height = null): bool
 	{
+		if ( ! $this->enlarge && (
+			(is_null($width) && $height > $this->height) ||
+			(is_null($height) && $width > $this->width) ||
+			( ! is_null($width) && ! is_null($height) && $width > $this->width || $height > $this->height)))
+		{
+			$this->cache = $this->dirname;
+			return true;
+		}
 		if ( ! is_null($this->method))
 		{
 			$cache = "/{$this->urlify($this->method)}";
 		}
 		else
 		{
-			if ($method == 'scale' && is_null($height))
+			if ($method == 'scaled' && is_null($height))
 			{
 				$cache = "/$method/$width/auto";
 			}
-			else if ($method == 'scale' && is_null($height))
+			else if ($method == 'scaled' && is_null($height))
 			{
 				$cache = "/$method/auto/$height";
 			}
@@ -199,7 +238,7 @@ class ImageCache extends File
 			$cache = "/{$this->prefix}$cache";
 		}
 
-		$this->cache = "{$this->dirname}$cache";
+		$this->cache = $this->dirname . $cache;
 
 		$cached = true;
 		if ( ! is_dir($this->cache))

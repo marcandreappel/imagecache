@@ -21,3 +21,9 @@ Returns */replacement* instead of */thumbnail/50/50*.
 $imageCache->prefix('mycache')->thumbnail(50, 50)->publicPath;
 ``` 
 Adds */mycache* to the resulting path, eg: */mycache/thumbnail/50/50*.
+
+### Allow enlarging of images
+```php
+$imageCache->enlarge(true)->scale(1200);
+``` 
+  
