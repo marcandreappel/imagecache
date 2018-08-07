@@ -196,13 +196,17 @@ class ImageCache
 				break;
 			case 'publicImage':
 			case 'public':
-			case 'image':
 			default:
 				return "{$this->cacheFolder}/{$this->cacheFilename}";
 				break;
 		}
 	}
 
+	/**
+	 * @param string $override
+	 *
+	 * @return $this
+	 */
 	public function method(string $override)
 	{
 		$this->method = $override;
