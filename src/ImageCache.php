@@ -70,9 +70,9 @@ class ImageCache
 	{
 		if ( ! $this->prepareCache('thumbnail', $width, $height))
 		{
-			$scale           = max($width / $this->_width(), $height / $this->_height());
-			$_width          = ceil($this->_width() * $scale);
-			$_height         = ceil($this->_height() * $scale);
+			$scale           = max($width / $this->width(), $height / $this->height());
+			$_width          = ceil($this->width() * $scale);
+			$_height         = ceil($this->height() * $scale);
 			$x_offset        = floor(($_width - $width) / 2);
 			$y_offset        = floor(($_height - $height) / 2);
 
@@ -180,7 +180,12 @@ class ImageCache
 		return $this;
 	}
 
-	public function __get($name)
+	/**
+	 * @param $name
+	 *
+	 * @return string
+	 */
+	public function __get($name): string
 	{
 		switch ($name)
 		{
@@ -196,13 +201,17 @@ class ImageCache
 				break;
 			case 'publicImage':
 			case 'public':
-			case 'image':
 			default:
 				return "{$this->cacheFolder}/{$this->cacheFilename}";
 				break;
 		}
 	}
 
+	/**
+	 * @param string $override
+	 *
+	 * @return $this
+	 */
 	public function method(string $override)
 	{
 		$this->method = $override;
@@ -276,12 +285,18 @@ class ImageCache
 		return $this;
 	}
 
-	private function _width(): int
+	/**
+	 * @return int
+	 */
+	public function width(): int
 	{
 		return $this->imageObject->getWidth();
 	}
 
-	private function _height(): int
+	/**
+	 * @return int
+	 */
+	public function height(): int
 	{
 		return $this->imageObject->getHeight();
 	}

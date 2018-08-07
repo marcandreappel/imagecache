@@ -16,7 +16,7 @@ $thumbnail = $imageCache->thumbnail(50, 50)->image;
 
 ## Properties
 
- - `image` ⇢ Returns the public accessible cached image (Aliases: `public`, `publicImage`)  
+ - `public` ⇢ Returns the public accessible cached image (Alias: `publicImage`)  
  - `absolute` ⇢ Absolute path to the cached image (Alias: `absoluteImage`)
  - `publicPath` ⇢ Path to the cache folder only  
  - `absolutePath` ⇢ Absolute path to the cache folder
