@@ -11,7 +11,7 @@
 namespace MarcAndreAppel\ImageCache;
 
 use Intervention\Image\ImageManager;
-use \InvalidArgumentException;
+use InvalidArgumentException;
 use MarcAndreAppel\ImageCache\Exception\FileNotFound;
 use MarcAndreAppel\Textr\Textr;
 
@@ -42,16 +42,15 @@ class ImageCache
 	 */
 	public function __construct(string $path)
 	{
-		if ( ! file_exists($path) || ! is_file($path))
+		if (!file_exists($path) || !is_file($path))
 		{
-			throw new FileNotFound('File not found');
+			throw new FileNotFound("File not found in path: $path");
 		}
-
-		$info = pathinfo($path);
-		$this->dirname = array_key_exists('dirname', $info) ? $info['dirname'] : null;
-		$this->basename = array_key_exists('basename', $info) ? $info['basename'] : null;
+		$info            = pathinfo($path);
+		$this->dirname   = array_key_exists('dirname', $info) ? $info['dirname'] : null;
+		$this->basename  = array_key_exists('basename', $info) ? $info['basename'] : null;
 		$this->extension = array_key_exists('extension', $info) ? $info['extension'] : null;
-		$this->filename = array_key_exists('filename', $info) ? $info['filename'] : null;
+		$this->filename  = array_key_exists('filename', $info) ? $info['filename'] : null;
 
 		list($this->width, $this->height) = getimagesize($path);
 	}
@@ -64,36 +63,133 @@ class ImageCache
 	 */
 	public function thumbnail(int $width, int $height): self
 	{
-		if ( ! $this->cache('thumbnail', $width, $height))
+		if (!$this->cache('thumbnail', $width, $height))
 		{
-			$scale           = max($width / $this->width(), $height / $this->height());
-			$_width          = ceil($this->width() * $scale);
-			$_height         = ceil($this->height() * $scale);
-			$x_offset        = floor(($_width - $width) / 2);
-			$y_offset        = floor(($_height - $height) / 2);
+			$scale    = max($width / $this->width(), $height / $this->height());
+			$_width   = ceil($this->width() * $scale);
+			$_height  = ceil($this->height() * $scale);
+			$x_offset = floor(($_width - $width) / 2);
+			$y_offset = floor(($_height - $height) / 2);
 
 			$this->image->resize($_width, $_height);
 			$this->image->crop($width, $height, $x_offset, $y_offset);
 
 			$this->save();
 		}
+
 		return $this;
 	}
 
 	/**
-	 * @param $width
-	 * @param $height
+	 * @param string   $method
+	 * @param int      $width
+	 * @param int|null $height
 	 *
+	 * @return bool
+	 */
+	private function cache(string $method, int $width = null, int $height = null): bool
+	{
+		if (!$this->enlarge)
+		{
+			$original_is_higher = false;
+			$original_is_larger = false;
+			if (is_null($width) && $height > $this->height)
+			{
+				$original_is_higher = true;
+			}
+			if (is_null($height) && $width > $this->width)
+			{
+				$original_is_larger = true;
+			}
+			if (!is_null($width) && !is_null($height))
+			{
+				if ($width > $this->width)
+				{
+					$original_is_larger = true;
+				}
+				if ($height > $this->height)
+				{
+					$original_is_higher = true;
+				}
+			}
+			if ($original_is_higher || $original_is_larger)
+			{
+				$this->cache = $this->dirname;
+
+				return true;
+			}
+		}
+		if (!is_null($this->method))
+		{
+			$cache = "/{$this->urlify($this->method)}";
+		}
+		else
+		{
+			if ($method == 'scaled' && is_null($height))
+			{
+				$cache = "/$method/$width/auto";
+			}
+			else if ($method == 'scaled' && is_null($height))
+			{
+				$cache = "/$method/auto/$height";
+			}
+			else
+			{
+				$cache = "/$method/$width/$height";
+			}
+		}
+		if (!is_null($this->prefix))
+		{
+			$cache = "/{$this->prefix}$cache";
+		}
+
+		$this->cache = $this->dirname . $cache;
+
+		$cached = true;
+		if (!is_dir($this->cache))
+		{
+			$umask = umask(0);
+			mkdir($this->cache, 0755, true);
+			umask($umask);
+			$cached = false;
+		}
+		else if (!file_exists("{$this->cache}/{$this->basename}"))
+		{
+			$cached = false;
+		}
+		if (!$cached)
+		{
+			$image       = new ImageManager();
+			$this->image = $image->make("{$this->dirname}/{$this->basename}");
+		}
+
+		return $cached;
+	}
+
+	/**
+	 * @return int
+	 */
+	public function width(): int
+	{
+		return $this->image->getWidth();
+	}
+
+	/**
+	 * @return int
+	 */
+	public function height(): int
+	{
+		return $this->image->getHeight();
+	}
+
+	/**
 	 * @return ImageCache
 	 */
-	public function resize($width, $height): self
+	private function save()
 	{
-		if ( ! $this->cache('resized', $width, $height))
-		{
-			$this->image->resize($width, $height);
-			$this->save();
-		}
-		return $this;
+		$this->image->save("{$this->cache}/{$this->basename}", (int) $this->quality);
+		clearstatcache();
+		chmod("{$this->cache}/{$this->basename}", 0644);
 	}
 
 	/**
@@ -106,11 +202,12 @@ class ImageCache
 	 */
 	public function crop(int $width, int $height, int $x_offset, int $y_offset): self
 	{
-		if ( ! $this->cache('cropped', $width, $height))
+		if (!$this->cache('cropped', $width, $height))
 		{
 			$this->image->crop($width, $height, $x_offset, $y_offset);
 			$this->save();
 		}
+
 		return $this;
 	}
 
@@ -122,7 +219,7 @@ class ImageCache
 	 */
 	public function scale(int $width = null, int $height = null): self
 	{
-		if ( ! $this->cache('scaled', $width, $height))
+		if (!$this->cache('scaled', $width, $height))
 		{
 			if (is_null($width) && is_null($height))
 			{
@@ -145,9 +242,26 @@ class ImageCache
 			$this->image->heighten($height);
 			$this->save();
 		}
+
 		return $this;
 	}
 
+	/**
+	 * @param $width
+	 * @param $height
+	 *
+	 * @return ImageCache
+	 */
+	public function resize($width, $height): self
+	{
+		if (!$this->cache('resized', $width, $height))
+		{
+			$this->image->resize($width, $height);
+			$this->save();
+		}
+
+		return $this;
+	}
 
 	/**
 	 * @param string $override
@@ -195,116 +309,6 @@ class ImageCache
 		$this->enlarge = $override;
 
 		return $this;
-	}
-
-	/**
-	 * @param string   $method
-	 * @param int      $width
-	 * @param int|null $height
-	 *
-	 * @return bool
-	 */
-	private function cache(string $method, int $width = null, int $height = null): bool
-	{
-		if ( ! $this->enlarge)
-		{
-			$original_is_higher = false;
-			$original_is_larger = false;
-			if (is_null($width) && $height > $this->height)
-			{
-				$original_is_higher = true;
-			}
-			if (is_null($height) && $width > $this->width)
-			{
-				$original_is_larger = true;
-			}
-			if ( ! is_null($width) && ! is_null($height))
-			{
-				if ($width > $this->width)
-				{
-					$original_is_larger = true;
-				}
-				if ($height > $this->height)
-				{
-					$original_is_higher = true;
-				}
-			}
-			if ($original_is_higher || $original_is_larger)
-			{
-				$this->cache = $this->dirname;
-				return true;
-			}
-		}
-		if ( ! is_null($this->method))
-		{
-			$cache = "/{$this->urlify($this->method)}";
-		}
-		else
-		{
-			if ($method == 'scaled' && is_null($height))
-			{
-				$cache = "/$method/$width/auto";
-			}
-			else if ($method == 'scaled' && is_null($height))
-			{
-				$cache = "/$method/auto/$height";
-			}
-			else
-			{
-				$cache = "/$method/$width/$height";
-			}
-		}
-		if ( ! is_null($this->prefix))
-		{
-			$cache = "/{$this->prefix}$cache";
-		}
-
-		$this->cache = $this->dirname . $cache;
-
-		$cached = true;
-		if ( ! is_dir($this->cache))
-		{
-			$umask = umask(0);
-			mkdir($this->cache, 0755, true);
-			umask($umask);
-			$cached = false;
-		}
-		else if ( ! file_exists("{$this->cache}/{$this->basename}"))
-		{
-			$cached = false;
-		}
-		if ( ! $cached)
-		{
-			$image = new ImageManager();
-			$this->image = $image->make("{$this->dirname}/{$this->basename}");
-		}
-		return $cached;
-	}
-
-	/**
-	 * @return ImageCache
-	 */
-	private function save()
-	{
-		$this->image->save("{$this->cache}/{$this->basename}", (int) $this->quality);
-		clearstatcache();
-		chmod("{$this->cache}/{$this->basename}", 0644);
-	}
-
-	/**
-	 * @return int
-	 */
-	public function width(): int
-	{
-		return $this->image->getWidth();
-	}
-
-	/**
-	 * @return int
-	 */
-	public function height(): int
-	{
-		return $this->image->getHeight();
 	}
 
 	/**
