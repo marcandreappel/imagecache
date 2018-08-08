@@ -32,6 +32,7 @@ class ImageCache
 	protected $basename;
 	protected $extension;
 	protected $filename;
+	protected $hidden = true;
 
 	/**
 	 * ImageCache constructor.
@@ -76,7 +77,6 @@ class ImageCache
 
 			$this->save();
 		}
-
 		return $this;
 	}
 
@@ -143,8 +143,14 @@ class ImageCache
 			$cache = "/{$this->prefix}$cache";
 		}
 
-		$this->cache = $this->dirname . $cache;
-
+		if (!$this->hidden)
+		{
+			$this->cache = $this->dirname . $cache;
+		}
+		else
+		{
+			$this->cache = "{$this->dirname}/.cache$cache";
+		}
 		$cached = true;
 		if (!is_dir($this->cache))
 		{
@@ -162,7 +168,6 @@ class ImageCache
 			$image       = new ImageManager();
 			$this->image = $image->make("{$this->dirname}/{$this->basename}");
 		}
-
 		return $cached;
 	}
 
@@ -207,7 +212,6 @@ class ImageCache
 			$this->image->crop($width, $height, $x_offset, $y_offset);
 			$this->save();
 		}
-
 		return $this;
 	}
 
@@ -242,7 +246,6 @@ class ImageCache
 			$this->image->heighten($height);
 			$this->save();
 		}
-
 		return $this;
 	}
 
@@ -259,6 +262,18 @@ class ImageCache
 			$this->image->resize($width, $height);
 			$this->save();
 		}
+
+		return $this;
+	}
+
+	/**
+	 * @param bool $override
+	 *
+	 * @return $this
+	 */
+	public function hidden(bool $override)
+	{
+		$this->hidden = $override;
 
 		return $this;
 	}

@@ -14,16 +14,21 @@ $thumbnail = $imageCache->thumbnail(50, 50)->cachedImage;
 ```php
 $imageCache->method('replacement')->thumbnail(50, 50)->publicPath;
 ``` 
-Returns */replacement* instead of */thumbnail/50/50*.
+Returns */.cache/replacement* instead of */.cache/thumbnail/50/50*.
 
 ### Cache path prefixing
 ```php
 $imageCache->prefix('mycache')->thumbnail(50, 50)->publicPath;
 ``` 
-Adds */mycache* to the resulting path, eg: */mycache/thumbnail/50/50*.
+Adds */.cache/mycache* to the resulting path, eg: */.cache/mycache/thumbnail/50/50*.
 
 ### Allow enlarging of images
 ```php
 $imageCache->enlarge(true)->scale(1200);
 ``` 
+Original size might be 400px ✕ 300px and hence becomes bigger.
   
+### Create visible subfolders
+```php
+$imageCache->hidden(false)->scale(1200);
+``` 
