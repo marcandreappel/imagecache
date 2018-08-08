@@ -206,13 +206,34 @@ class ImageCache
 	 */
 	private function cache(string $method, int $width = null, int $height = null): bool
 	{
-		if ( ! $this->enlarge && (
-			(is_null($width) && $height > $this->height) ||
-			(is_null($height) && $width > $this->width) ||
-			( ! is_null($width) && ! is_null($height) && $width > $this->width || $height > $this->height)))
+		if ( ! $this->enlarge)
 		{
-			$this->cache = $this->dirname;
-			return true;
+			$original_is_higher = false;
+			$original_is_larger = false;
+			if (is_null($width) && $height > $this->height)
+			{
+				$original_is_higher = true;
+			}
+			if (is_null($height) && $width > $this->width)
+			{
+				$original_is_larger = true;
+			}
+			if ( ! is_null($width) && ! is_null($height))
+			{
+				if ($width > $this->width)
+				{
+					$original_is_larger = true;
+				}
+				if ($height > $this->height)
+				{
+					$original_is_higher = true;
+				}
+			}
+			if ($original_is_higher || $original_is_larger)
+			{
+				$this->cache = $this->dirname;
+				return true;
+			}
 		}
 		if ( ! is_null($this->method))
 		{
