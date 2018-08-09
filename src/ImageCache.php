@@ -93,26 +93,15 @@ class ImageCache
 		{
 			$original_is_higher = false;
 			$original_is_larger = false;
-			if (is_null($width) && $height > $this->height)
+			if (is_null($height) || $height < $this->height)
 			{
 				$original_is_higher = true;
 			}
-			if (is_null($height) && $width > $this->width)
+			if (is_null($width) || $width < $this->width)
 			{
 				$original_is_larger = true;
 			}
-			if (!is_null($width) && !is_null($height))
-			{
-				if ($width > $this->width)
-				{
-					$original_is_larger = true;
-				}
-				if ($height > $this->height)
-				{
-					$original_is_higher = true;
-				}
-			}
-			if ($original_is_higher || $original_is_larger)
+			if ( ! $original_is_higher || ! $original_is_larger)
 			{
 				$this->cache = $this->dirname;
 
