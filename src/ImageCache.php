@@ -332,4 +332,34 @@ class ImageCache
 	{
 		return "{$this->cache}/{$this->basename}";
 	}
+
+	/**
+	 * @param     $width
+	 * @param     $height
+	 * @param int $rgb
+	 *
+	 * @return bool
+	 */
+	private function checkMemory($width, $height, $rgb = 3)
+	{
+		$value = trim(ini_get('memory_limit'));
+		$format = strtolower(substr($value, -1));
+		$memoryLimit = substr($value, 0, -1);
+		switch($format) {
+			case 'g':
+				$memoryLimit *= (1024 * (1024 * 1024));
+				break;
+			case 'm':
+				$memoryLimit *= (1024 * 1024);
+				break;
+			case 'k':
+				$memoryLimit *= 1024;
+				break;
+		}
+		$memoryNeed = $width * $height * $rgb * 1.7;
+		$memoryUsage = memory_get_usage();
+		$memoryAvailable = $memoryLimit - $memoryUsage;
+
+		return ($memoryNeed < $memoryAvailable);
+	}
 }
