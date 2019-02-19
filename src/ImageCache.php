@@ -13,6 +13,7 @@ namespace MarcAndreAppel\ImageCache;
 use Intervention\Image\ImageManager;
 use InvalidArgumentException;
 use MarcAndreAppel\ImageCache\Exception\FileNotFound;
+use MarcAndreAppel\ImageCache\Exception\ImageTooHeavy;
 use MarcAndreAppel\Textr\Textr;
 
 
@@ -40,6 +41,7 @@ class ImageCache
 	 * @param string $path
 	 *
 	 * @throws FileNotFound
+	 * @throws ImageTooHeavy
 	 */
 	public function __construct(string $path)
 	{
@@ -54,6 +56,11 @@ class ImageCache
 		$this->filename  = array_key_exists('filename', $info) ? $info['filename'] : null;
 
 		list($this->width, $this->height) = getimagesize($path);
+
+		if (! $this->checkMemory($this->width, $this->height))
+		{
+			throw new ImageTooHeavy("Image dimensions are too big for memory limit");
+		}
 	}
 
 	/**
