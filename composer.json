@@ -16,7 +16,7 @@
   ],
   "require": {
     "php": ">=7.0.0",
-    "intervention/image": "2.4.2",
+    "intervention/image": "2.6.0",
     "marcandreappel/textr": "1.2.0"
   },
   "autoload": {
